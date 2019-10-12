@@ -158,8 +158,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Youtube 
     {
-        const API_KEY = 'AIzaSyBAOTiaP9BsOz_HYcTdnHHr-trnDDrZiIo';
-        const CLIENT_ID = '448977667683-i8bnnifk8mv1gtak2fasdo0j7um5nbku.apps.googleusercontent.com';
+        const API_KEY = 'ххххххххххххххх';
+        const CLIENT_ID = 'ххххххххххххххх';
 
         // Авторизация
         {
@@ -193,16 +193,51 @@ document.addEventListener('DOMContentLoaded', () => {
         {
             const gloTube = document.querySelector('.logo-academy');
             const trends = document.getElementById('yt_trend');
-            const like = document.getElementById('like');
+			const like = document.getElementById('like');
+			const subscriptions = document.getElementById('subscriptions');
+			const searchForm = document.querySelector('.search-form');
 
             const request = options => gapi.client.youtube[options.method]
                 .list(options)
                 .then(response => response.result.items)
-                .then(render)
-                .then(youtuber)
+                .then(data => options.method ==='subscriptions'? renderSub(data) : render(data))
                 .catch(err => console.err('Во время запроса произошло ошибка: ' + err))
 
-            const render = data => {
+            const renderSub = data => {
+                console.log(data)
+                const ytWrapper = document.getElementById('yt-wrapper');
+                ytWrapper.textContent = '';
+                data.forEach(item => {
+					console.log('sub')
+                    try {
+                        const {snippet:{resourceId:{channelId}, description, title,thumbnails:{high:{url}}}} = item;
+                        ytWrapper.innerHTML += `
+                            <div class="yt" data-youtuber="${channelId}">
+                              <div class="yt-thumbnail" style="--aspect-ratio:16/9;">
+                                <img src="${url}" alt="thumbnail" class="yt-thumbnail__img">
+                              </div>
+                              <div class="yt-title">${title}</div>
+                              <div class="yt-channel">${description}</div>
+                            </div>
+                        `;
+                    } catch (err) {
+                        console.error(err);
+                    }
+				});
+				ytWrapper.querySelectorAll('.yt').forEach(item =>{
+					item.addEventListener('click', () =>{
+						request({
+							method: 'search',
+							part: 'snippet',
+							channelId: item.dataset.youtuber,
+							order: 'date',
+							maxResults: 10,
+						})
+					})
+				})
+			};
+			
+			const render = data => {
                 console.log(data)
                 const ytWrapper = document.getElementById('yt-wrapper');
                 ytWrapper.textContent = '';
@@ -237,7 +272,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     } catch (err) {
                         console.error(err);
                     }
-                })
+				});
+				youtuber();
             };
 
             gloTube.addEventListener('click', () => {
@@ -268,7 +304,32 @@ document.addEventListener('DOMContentLoaded', () => {
                     playlistId: 'LLQmjILeRERPEibf-vPpypjg',
                     maxResults: 10,
                 })
-            });
+			});
+			subscriptions.addEventListener('click', () => {
+				request({
+                    method: 'subscriptions',
+                    part: 'snippet',
+                    mine: true,
+                    maxResults: 10,
+                })
+			});
+			searchForm.addEventListener('submit', event => {
+				event.preventDefault();
+				const valueInput = searchForm.elements[0].value;
+				if(!valueInput) {
+					searchForm.style.border = '1px solid red'
+					return;
+				} 
+				searchForm.style.border = '';
+				request({
+                    method: 'search',
+                    part: 'snippet',
+                    order: 'relevance',
+					maxResults: 10,
+					q: valueInput
+				})
+				searchForm.elements[0].value = '';
+			});
         }
     }
 })
